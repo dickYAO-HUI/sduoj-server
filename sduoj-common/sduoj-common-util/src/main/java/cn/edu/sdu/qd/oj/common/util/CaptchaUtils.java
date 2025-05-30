@@ -1,118 +1,108 @@
-/*
- * Copyright 2020-2021 the original author or authors.
- *
- * Licensed under the General Public License, Version 3.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.gnu.org/licenses/gpl-3.0.en.html
- */
-
 package cn.edu.sdu.qd.oj.common.util;
 
 import javax.imageio.ImageIO;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
 import java.util.Random;
 
 /**
- * @Description 验证码工具类 code from the Internet
- **/
+ * 验证码工具类
+ */
 public class CaptchaUtils {
 
-    private static Random random = new Random();
-    private static int width = 165;      // 验证码的宽
-    private static int height = 45;      // 验证码的高
-    private static int lineSize = 30;    // 验证码中夹杂的干扰线数量
-    private static int randomStrNum = 4; // 验证码字符个数
+    private static final Random RANDOM = new Random();
 
-    private static String randomString = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWSYZ";
+    // 验证码参数
+    private static final int WIDTH = 165;
+    private static final int HEIGHT = 45;
+    private static final int LINE_COUNT = 30;
+    private static final int CHAR_COUNT = 4;
+    private static final String CHAR_POOL = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    // 字体的设置
+    // 字体配置
     private static Font getFont() {
-        return new Font("Times New Roman", Font.ROMAN_BASELINE, 40);
+        return new Font("Times New Roman", Font.PLAIN, 40);
     }
 
-    // 颜色的设置
-    private static Color getRandomColor(int fc, int bc) {
-        fc = Math.min(fc, 255);
-        bc = Math.min(bc, 255);
-
-        int r = fc + random.nextInt(bc - fc - 16);
-        int g = fc + random.nextInt(bc - fc - 14);
-        int b = fc + random.nextInt(bc - fc - 12);
-
+    // 随机颜色生成
+    private static Color getRandomColor(int min, int max) {
+        min = Math.min(min, 255);
+        max = Math.min(max, 255);
+        if (max <= min + 16) {
+            max = min + 17;  // 保证不越界
+        }
+        int r = min + RANDOM.nextInt(max - min - 15);
+        int g = min + RANDOM.nextInt(max - min - 13);
+        int b = min + RANDOM.nextInt(max - min - 11);
         return new Color(r, g, b);
     }
 
-    // 干扰线的绘制
+    // 绘制干扰线
     private static void drawLine(Graphics g) {
-        int x = random.nextInt(width);
-        int y = random.nextInt(height);
-        int xl = random.nextInt(20);
-        int yl = random.nextInt(10);
+        int x = RANDOM.nextInt(WIDTH);
+        int y = RANDOM.nextInt(HEIGHT);
+        int xl = RANDOM.nextInt(20);
+        int yl = RANDOM.nextInt(10);
         g.drawLine(x, y, x + xl, y + yl);
-
     }
 
-    // 随机字符的获取
-    private static String getRandomString(int num) {
-        num = num > 0 ? num : randomString.length();
-        return String.valueOf(randomString.charAt(random.nextInt(num)));
+    // 获取随机字符
+    private static char getRandomChar() {
+        return CHAR_POOL.charAt(RANDOM.nextInt(CHAR_POOL.length()));
     }
 
-    // 字符串的绘制
-    private static String drawString(Graphics g, String randomStr, int i) {
-        g.setFont(getFont());
-        g.setColor(getRandomColor(108, 190));
-        //System.out.println(random.nextInt(randomString.length()));
-        String rand = getRandomString(random.nextInt(randomString.length()));
-        randomStr += rand;
-        g.translate(random.nextInt(3), random.nextInt(6));
-        g.drawString(rand, 40 * i + 10, 25);
-        return randomStr;
+    // 绘制验证码字符
+    private static String drawChars(Graphics g) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < CHAR_COUNT; i++) {
+            char ch = getRandomChar();
+            sb.append(ch);
+
+            g.setFont(getFont());
+            g.setColor(getRandomColor(108, 190));
+            g.translate(RANDOM.nextInt(3), RANDOM.nextInt(6));
+            g.drawString(String.valueOf(ch), 40 * i + 10, 35);
+        }
+        return sb.toString();
     }
 
-    // 生成随机图片的base64编码字符串
+    // 获取验证码图像的 Base64 编码
     public static CaptchaEntity getRandomBase64Captcha() {
-        // BufferedImage类是具有缓冲区的Image类,Image类是用于描述图像信息的类
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_BGR);
+        BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics g = image.getGraphics();
-        g.fillRect(0, 0, width, height);
-        g.setColor(getRandomColor(105, 189));
-        g.setFont(getFont());
-        // 干扰线
-        for (int i = 0; i < lineSize; i++) {
-            drawLine(g);
-        }
-        //随机字符
-        String randomStr = "";
-        for (int i = 0; i < randomStrNum; i++) {
-            randomStr = drawString(g, randomStr, i);
-        }
-        g.dispose();
-        String base64String = "";
+
         try {
+            // 背景填充
+            g.setColor(getRandomColor(200, 250));
+            g.fillRect(0, 0, WIDTH, HEIGHT);
+
+            // 干扰线
+            for (int i = 0; i < LINE_COUNT; i++) {
+                drawLine(g);
+            }
+
+            // 验证码字符
+            String code = drawChars(g);
+
+            // 转为 Base64
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ImageIO.write(image, "PNG", bos);
+            String base64 = Base64.getEncoder().encodeToString(bos.toByteArray());
 
-            byte[] bytes = bos.toByteArray();
-            Base64.Encoder encoder = Base64.getEncoder();
-            base64String = "data:image/png;base64," + encoder.encodeToString(bytes);
+            return new CaptchaEntity(code, "data:image/png;base64," + base64);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException("生成验证码失败", e);
+        } finally {
+            g.dispose();
         }
-
-        return new CaptchaEntity(randomStr, base64String);
     }
 
+    // 封装验证码内容
     public static class CaptchaEntity {
-        private String randomStr;
-        private String base64;
+        private final String randomStr;
+        private final String base64;
 
         public CaptchaEntity(String randomStr, String base64) {
             this.randomStr = randomStr;
