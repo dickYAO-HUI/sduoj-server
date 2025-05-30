@@ -1,40 +1,12 @@
-/*
- * Copyright 2020-2021 the original author or authors.
- *
- * Licensed under the General Public License, Version 3.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.gnu.org/licenses/gpl-3.0.en.html
- */
-
-package cn.edu.sdu.qd.oj.common.entity;
-
-import cn.edu.sdu.qd.oj.common.enums.AcceptedEnum;
-import cn.edu.sdu.qd.oj.common.enums.ApiExceptionEnum;
-import cn.edu.sdu.qd.oj.common.enums.HttpStatus;
-import lombok.Getter;
-import lombok.ToString;
-
-import java.io.Serializable;
-
-/**
- * @ClassName ResponseResult
- * @Description 反馈结果类
- * @Author zhangt2333
- * @Date 2020/2/26 11:29
- * @Version V1.0
- **/
-
 @Getter
 @ToString
-public class ResponseResult <T> implements Serializable {
+public class ResponseResult<T> implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private int code;
 	private String message;
 	private long timestamp;
-	private Object data;
+	private T data;  // 修改为泛型类型
 
 	private ResponseResult() {
 		this.timestamp = System.currentTimeMillis();
@@ -43,91 +15,105 @@ public class ResponseResult <T> implements Serializable {
 	/**
 	 * 成功响应，但无响应数据。
 	 */
-	public static ResponseResult ok() {
+	public static ResponseResult<Void> ok() {
 		return ok(null);
 	}
-
-
-	/**
-	 * 错误响应，需要客户端处理的
-	 */
-	public static ResponseResult fail(ApiExceptionEnum em) {
-		return new ResponseResult()
-				.setCode(em.code)
-				.setMessage(em.message);
-	}
-
-	/**
-	 * 错误响应，需要客户端处理的
-	 */
-	public static ResponseResult fail(int code, String message) {
-		return new ResponseResult()
-				.setCode(code)
-				.setMessage(message);
-	}
-
-	/**
-	 * 错误响应，存在响应数据。
-	 */
-	public static <T> ResponseResult<T> fail(HttpStatus status) {
-		return new ResponseResult()
-				.setCode(status.value())
-				.setMessage(status.getReasonPhrase())
-				.setData(null);
-	}
-
-	/**
-	 * 错误响应，存在响应数据。
-	 */
-	public static <T> ResponseResult<T> fail(T data) {
-		return new ResponseResult()
-				.setCode(AcceptedEnum.ERROR.code)
-				.setMessage(AcceptedEnum.ERROR.message)
-				.setData(data);
-	}
-
-
-	/**
-	 * 异常反馈，需要服务端处理的
-	 */
-	public static ResponseResult error(ApiExceptionEnum em) {
-		return fail(em);
-	}
-
-	/**
-	 * 异常反馈，需要服务端处理的
-	 */
-	public static ResponseResult error() {
-		return new ResponseResult()
-				.setCode(AcceptedEnum.ERROR.code)
-				.setMessage(AcceptedEnum.ERROR.message);
-	}
-
 
 	/**
 	 * 成功响应，存在响应数据。
 	 */
 	public static <T> ResponseResult<T> ok(T data) {
-		return new ResponseResult()
+		return new ResponseResult<T>()
 				.setCode(AcceptedEnum.OK.code)
 				.setMessage(AcceptedEnum.OK.message)
 				.setData(data);
 	}
 
+	/**
+	 * 错误响应（需要客户端处理），无附加数据
+	 */
+	public static ResponseResult<?> fail(ApiExceptionEnum em) {
+		return fail(em.code, em.message);
+	}
 
+	/**
+	 * 错误响应（需要客户端处理），带附加数据
+	 */
+	public static <T> ResponseResult<T> fail(ApiExceptionEnum em, T data) {
+		return fail(em.code, em.message, data);
+	}
 
-	public ResponseResult setData(T data) {
-		this.data = data;
+	/**
+	 * 错误响应（基础方法）
+	 */
+	public static <T> ResponseResult<T> fail(int code, String message) {
+		return fail(code, message, null);
+	}
+
+	/**
+	 * 错误响应（增强版，支持附加数据）
+	 */
+	public static <T> ResponseResult<T> fail(int code, String message, T data) {
+		return new ResponseResult<T>()
+				.setCode(code)
+				.setMessage(message)
+				.setData(data);
+	}
+
+	/**
+	 * 错误响应（HTTP状态码版本）
+	 */
+	public static ResponseResult<?> fail(HttpStatus status) {
+		return fail(status.value(), status.getReasonPhrase());
+	}
+
+	/**
+	 * 错误响应（HTTP状态码+附加数据）
+	 *
+	 * 新增函数：支持通过HTTP状态和自定义数据构造错误响应
+	 */
+	public static <T> ResponseResult<T> fail(HttpStatus status, T data) {
+		return fail(status.value(), status.getReasonPhrase(), data);
+	}
+
+	/**
+	 * 异常反馈（服务端错误）
+	 */
+	public static ResponseResult<?> error() {
+		return new ResponseResult<>()
+				.setCode(AcceptedEnum.ERROR.code)
+				.setMessage(AcceptedEnum.ERROR.message);
+	}
+
+	/**
+	 * 检查响应是否成功
+	 */
+	public boolean isSuccess() {
+		return code == AcceptedEnum.OK.code;
+	}
+
+	/**
+	 * 检查响应是否失败
+	 */
+	public boolean isFailed() {
+		return !isSuccess();
+	}
+
+	// 修改返回类型为当前泛型类型
+	public ResponseResult<T> setCode(int code) {
+		this.code = code;
 		return this;
 	}
 
-	public ResponseResult setMessage(String message) {
+	// 修改返回类型为当前泛型类型
+	public ResponseResult<T> setMessage(String message) {
 		this.message = message;
 		return this;
 	}
 
-	public ResponseResult setCode(int code) {
-		this.code = code;
+	// 修改返回类型为当前泛型类型
+	public ResponseResult<T> setData(T data) {
+		this.data = data;
 		return this;
 	}
 }
