@@ -78,7 +78,8 @@ public class SubmissionDTO extends BaseDTO {
 
     private String problemTitle;
 
+    private Integer judgeTemplateType;
+
     private String judgeTemplateTitle;
 
-    private Integer judgeTemplateType;
 }
